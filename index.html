@@ -28,7 +28,11 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+        html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; }
+        @supports (overflow: clip) { html, body { overflow-x: clip; } }
+        /* phone taps: no double-tap zoom, no long-press callout or text selection on things she taps */
+        button { touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+        button:focus:not(:focus-visible) { outline: none; }
 
         body {
             font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -116,6 +120,7 @@
         .kicker { font-size: .75rem; letter-spacing: .18em; text-transform: uppercase; font-weight: 700; color: var(--rose-d); }
         h2 { font-family: 'Playfair Display', serif; font-weight: 600; font-size: clamp(1.6rem, 7vw, 2.1rem); line-height: 1.2; margin: 6px 0 8px; }
         .lead { color: var(--muted); max-width: 400px; margin: 0 auto; }
+        h1, h2, .lead, .hero .sub, .bubble, .gift-tag .msg, .reply .big { text-wrap: balance; }
 
         /* ---------- Hero ---------- */
         .hero {
@@ -236,6 +241,115 @@
         .dots { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
         .dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(196, 85, 124, .2); transition: background .3s, transform .3s; }
         .dots i.on { background: var(--rose); transform: scale(1.2); }
+
+        /* ---------- Apology cat ---------- */
+        .bubble {
+            position: relative; display: inline-block; max-width: 320px; margin: 18px auto 4px;
+            padding: 12px 16px; border-radius: 18px; background: #fff; border: 1px solid var(--line);
+            box-shadow: 0 8px 20px rgba(80, 60, 120, .1);
+            font-family: 'Caveat', cursive; font-size: 1.45rem; line-height: 1.25; color: var(--ink);
+        }
+        .bubble::after {
+            content: ''; position: absolute; left: 50%; bottom: -9px; width: 16px; height: 16px; margin-left: -8px;
+            background: #fff; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); transform: rotate(45deg);
+        }
+        .bubble.pop { animation: pop .4s ease; }
+        .cat-btn {
+            display: block; width: min(190px, 58vw); margin: 6px auto 0; aspect-ratio: 160 / 150;
+            border: none; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+        }
+        .cat-btn svg { width: 100%; height: 100%; overflow: visible; transform-origin: 50% 90%; animation: sway 4s ease-in-out infinite; }
+        .cat-btn.boop svg { animation: boop .45s ease; }
+        @keyframes sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+        @keyframes boop { 0% { transform: scale(1); } 35% { transform: scale(1.1, .9); } 70% { transform: scale(.96, 1.05); } 100% { transform: scale(1); } }
+        .cat .eye { transform-box: fill-box; transform-origin: center; animation: blink 4s infinite; }
+        @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+        .cat .eye-h { display: none; }
+        .cat.happy .eye { display: none; }
+        .cat.happy .eye-h { display: inline; }
+        .cat-hint { font-size: .82rem; color: var(--muted); margin-top: 4px; }
+
+        /* ---------- Bouquet ---------- */
+        .bouquet { position: relative; width: min(250px, 78vw); aspect-ratio: 250 / 280; margin: 20px auto 6px; }
+        .bouquet .wrap { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; z-index: 2; pointer-events: none; overflow: visible; }
+        .bouquet .bow { opacity: 0; transform: scale(.3); transform-box: fill-box; transform-origin: center; transition: opacity .5s, transform .7s cubic-bezier(.3, 1.6, .5, 1); }
+        .bouquet.done .bow { opacity: 1; transform: none; }
+        .bloom {
+            position: absolute; z-index: 1; width: 1.2em; margin-left: -.6em; text-align: center; line-height: 1;
+            font-size: clamp(2.2rem, 11vw, 2.8rem); cursor: pointer; border: none; background: none; padding: 0;
+            -webkit-tap-highlight-color: transparent; filter: drop-shadow(0 4px 6px rgba(120, 60, 100, .2));
+            transform: rotate(var(--rot)); animation: grow .6s cubic-bezier(.3, 1.6, .5, 1);
+        }
+        .bloom.wiggle { animation: wiggle .5s ease; }
+        .bloom.leaf { font-size: clamp(2rem, 10vw, 2.5rem); cursor: default; animation: none; z-index: 0; }
+        @keyframes grow { from { transform: translateY(40px) rotate(var(--rot)) scale(.2); opacity: 0; } }
+        @keyframes wiggle { 30% { transform: rotate(calc(var(--rot) - 12deg)) scale(1.1); } 65% { transform: rotate(calc(var(--rot) + 10deg)); } }
+        /* after it's complete: sway, breathe, glow, sparkles, butterfly */
+        .bouquet::before {
+            content: ''; position: absolute; left: 50%; top: 30%; width: 120%; aspect-ratio: 1; z-index: 0; pointer-events: none;
+            transform: translate(-50%, -50%) scale(.6); border-radius: 50%; opacity: 0;
+            background: radial-gradient(circle, rgba(255, 214, 122, .55) 0%, rgba(255, 170, 200, .35) 40%, transparent 68%);
+            transition: opacity 1.2s ease, transform 1.2s ease;
+        }
+        .bouquet.done::before { opacity: 1; transform: translate(-50%, -50%) scale(1); animation: glow 3s ease-in-out 1.2s infinite; }
+        @keyframes glow { 50% { transform: translate(-50%, -50%) scale(1.08); opacity: .75; } }
+        .bouquet.done { transform-origin: 50% 100%; animation: bqsway 5s ease-in-out infinite; }
+        @keyframes bqsway { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+        .bouquet.done .bloom:not(.leaf):not(.wiggle) { animation: breathe 2.6s ease-in-out infinite; animation-delay: var(--dl, 0s); }
+        @keyframes breathe { 0%, 100% { transform: rotate(var(--rot)) scale(1); } 50% { transform: rotate(calc(var(--rot) + 4deg)) scale(1.07) translateY(-3px); } }
+        .sparkle {
+            position: absolute; z-index: 3; pointer-events: none; font-size: 14px; line-height: 1;
+            animation: twinkle 1.8s ease-out forwards;
+        }
+        @keyframes twinkle {
+            0% { transform: translateY(0) scale(.2); opacity: 0; }
+            30% { transform: translateY(-8px) scale(1); opacity: 1; }
+            100% { transform: translateY(-34px) scale(.5) rotate(40deg); opacity: 0; }
+        }
+        .butterfly {
+            position: absolute; left: 50%; top: 20%; z-index: 4; font-size: 26px; line-height: 1; pointer-events: none;
+            opacity: 0; transition: opacity 1s ease .6s;
+        }
+        .bouquet.done .butterfly { opacity: 1; animation: flutter-path 11s ease-in-out infinite; }
+        .butterfly span { display: inline-block; animation: flap .35s ease-in-out infinite alternate; }
+        @keyframes flap { to { transform: scaleX(.45); } }
+        @keyframes flutter-path {
+            0%   { transform: translate(-110px, 10px) rotate(-10deg); }
+            20%  { transform: translate(-40px, -50px) rotate(8deg); }
+            40%  { transform: translate(60px, -30px) rotate(-6deg); }
+            55%  { transform: translate(100px, 30px) rotate(10deg); }
+            75%  { transform: translate(20px, -60px) rotate(-8deg); }
+            100% { transform: translate(-110px, 10px) rotate(-10deg); }
+        }
+        .gift-tag.show.swing { animation: tagswing 3.5s ease-in-out infinite; transform-origin: 50% -7px; }
+        @keyframes tagswing { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(2deg); } }
+
+        .stems { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; overflow: visible; }
+        .stems line { stroke: #6fa86a; stroke-width: 3; stroke-linecap: round; animation: stemIn .6s ease; }
+        @keyframes stemIn { from { opacity: 0; } }
+
+        .picker { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+        .picker button {
+            appearance: none; border: 1px solid var(--line); background: rgba(255, 255, 255, .9); border-radius: 999px;
+            padding: 8px 14px; min-height: 44px; font: 700 .9rem 'Nunito', sans-serif; color: var(--ink); cursor: pointer;
+            transition: transform .15s; -webkit-tap-highlight-color: transparent;
+        }
+        .picker button:active { transform: scale(.93); }
+        .picker button span { font-size: 1.2rem; vertical-align: -2px; margin-right: 4px; }
+        .count { font-size: .82rem; color: var(--muted); margin-top: 10px; }
+        .gift-tag {
+            display: none; position: relative; max-width: 300px; margin: 16px auto 0; padding: 16px 18px 14px;
+            background: var(--paper); border-radius: 12px; border: 1px dashed rgba(196, 85, 124, .45);
+            box-shadow: 0 10px 26px rgba(80, 60, 120, .14); transform: rotate(-2deg);
+        }
+        .gift-tag.show { display: block; animation: pop .6s ease; }
+        .gift-tag::before {
+            content: ''; position: absolute; top: -7px; left: 50%; width: 14px; height: 14px; margin-left: -7px;
+            border-radius: 50%; background: #fff; border: 2px solid rgba(196, 85, 124, .5);
+        }
+        .gift-tag .to { font-family: 'Playfair Display', serif; font-weight: 600; font-size: 1.15rem; }
+        .gift-tag .msg { font-family: 'Caveat', cursive; font-size: 1.4rem; line-height: 1.25; color: #3f3657; margin: 6px 0; }
+        .gift-tag .from { font-family: 'Caveat', cursive; font-size: 1.6rem; font-weight: 700; color: var(--rose-d); }
 
         /* ---------- Promises ---------- */
         .promises { list-style: none; margin-top: 16px; text-align: left; }
@@ -401,6 +515,39 @@
             <div class="dots" id="dots"></div>
         </section>
 
+        <!-- Apology cat: a little comic relief -->
+        <section class="card rv">
+            <p class="kicker">A small break</p>
+            <h2>Someone wants to say hi</h2>
+            <p class="lead">I sent backup, because my own sorry face isn't very convincing.</p>
+            <div class="bubble" id="catBubble" aria-live="polite">psst… tap me 🐾</div>
+            <button class="cat-btn" id="catBtn" aria-label="Tap the apology cat">
+                <svg class="cat" id="cat" viewBox="0 0 160 150" aria-hidden="true">
+                    <g stroke="#5a4d6e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round">
+                        <polygon points="34,58 42,14 72,40" fill="#fff6ee"/>
+                        <polygon points="126,58 118,14 88,40" fill="#fff6ee"/>
+                        <polygon points="41,48 45,26 61,40" fill="#ffc6d6" stroke="none"/>
+                        <polygon points="119,48 115,26 99,40" fill="#ffc6d6" stroke="none"/>
+                        <ellipse cx="80" cy="76" rx="52" ry="42" fill="#fff6ee"/>
+                        <ellipse class="eye" cx="62" cy="72" rx="5" ry="7" fill="#3b3350" stroke="none"/>
+                        <ellipse class="eye" cx="98" cy="72" rx="5" ry="7" fill="#3b3350" stroke="none"/>
+                        <path class="eye-h" d="M55 74 Q62 64 69 74" fill="none"/>
+                        <path class="eye-h" d="M91 74 Q98 64 105 74" fill="none"/>
+                        <ellipse cx="48" cy="88" rx="8" ry="5" fill="#ffb3c7" stroke="none" opacity=".75"/>
+                        <ellipse cx="112" cy="88" rx="8" ry="5" fill="#ffb3c7" stroke="none" opacity=".75"/>
+                        <path d="M77 82 L83 82 L80 86 Z" fill="#e2799c" stroke-width="1.5"/>
+                        <path d="M72 89 Q76 94 80 89 Q84 94 88 89" fill="none" stroke-width="2"/>
+                        <path d="M30 80 L14 76 M30 86 L14 88 M130 80 L146 76 M130 86 L146 88" stroke-width="1.6" opacity=".6"/>
+                        <rect x="44" y="110" width="72" height="32" rx="7" fill="#fffaf3" stroke-width="2"/>
+                        <circle cx="47" cy="114" r="8" fill="#fff6ee" stroke-width="2"/>
+                        <circle cx="113" cy="114" r="8" fill="#fff6ee" stroke-width="2"/>
+                    </g>
+                    <text x="80" y="134" text-anchor="middle" font-family="Caveat, cursive" font-size="20" font-weight="700" fill="#c4557c">sorry!</text>
+                </svg>
+            </button>
+            <p class="cat-hint" id="catHint">tap the cat</p>
+        </section>
+
         <!-- Promises -->
         <section class="card rv">
             <p class="kicker">From now on</p>
@@ -421,8 +568,46 @@
             <div class="reply" id="reply" aria-live="polite"></div>
         </section>
 
+        <!-- Bouquet -->
+        <section class="card rv">
+            <p class="kicker">Before you go</p>
+            <h2>A bouquet for you</h2>
+            <p class="lead">I couldn't hand you real flowers, so pick your favourites and I'll wrap them up for you.</p>
+            <div class="bouquet" id="bouquet">
+                <span class="butterfly" aria-hidden="true"><span>🦋</span></span>
+                <svg class="wrap" viewBox="0 0 250 150" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="wg" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#ffe3ec"/>
+                            <stop offset="100%" stop-color="#f3c6d6"/>
+                        </linearGradient>
+                        <linearGradient id="wg2" x1="1" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#f7d2df"/>
+                            <stop offset="100%" stop-color="#e7aec3"/>
+                        </linearGradient>
+                    </defs>
+                    <polygon points="14,4 125,44 236,4 146,148 104,148" fill="url(#wg)" stroke="#d98aa7" stroke-width="2" stroke-linejoin="round"/>
+                    <polygon points="125,44 236,4 146,148 125,148" fill="url(#wg2)" opacity=".7"/>
+                    <path d="M125 44 L125 148" stroke="#d98aa7" stroke-width="1.2" opacity=".5"/>
+                    <g class="bow">
+                        <path d="M125 96 C100 78 92 104 108 108 C114 110 120 104 125 96 Z" fill="#c4557c"/>
+                        <path d="M125 96 C150 78 158 104 142 108 C136 110 130 104 125 96 Z" fill="#c4557c"/>
+                        <path d="M122 98 L112 132 M128 98 L138 132" stroke="#c4557c" stroke-width="5" stroke-linecap="round"/>
+                        <circle cx="125" cy="97" r="7" fill="#e2799c"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="picker" id="picker"></div>
+            <p class="count" id="bqCount"></p>
+            <div class="gift-tag" id="giftTag">
+                <p class="to" id="tagTo"></p>
+                <p class="msg" id="tagMsg"></p>
+                <p class="from" id="tagFrom"></p>
+            </div>
+        </section>
+
         <footer class="rv">
-            Written with a heavy heart and a hopeful one<br><b id="footerFrom">Taimour</b>
+            Written with a heavy heart and a hopeful one<br><b id="footerFrom">Taimour aka Chintu 🤍</b>
         </footer>
     </main>
 
@@ -431,6 +616,7 @@
     const CONFIG = {
         name: "Ma'am Kinza",
         from: 'Taimour',
+        footerFrom: 'Taimour aka Chintu 🤍',          // signature at the very bottom
         introGreeting: "My Dear Fav Ma'am Kinza,",   // first thing she sees on load
         heroName: "Ma'am",                            // shown under "I'm Sorry," after the envelope
 
@@ -456,6 +642,26 @@
             ['ごめんなさい', 'Japanese']
         ],
         healed: ["However it's said, I mean it with my whole heart.", 'Thank you for letting me try 🤍'],
+
+        // the apology cat, one line per tap
+        catLines: [
+            "Hi Ma'am! I'm the official Apology Cat 🐱 Taimour was too nervous to come in person.",
+            "Taimour has been practising a sorry face in the mirror. Honestly? It needs work 😅",
+            "Taimour wanted to bring you flowers, but I sat on them. So here's a virtual one 🌷",
+            "Let's take a deep breath together… in… and out… 🍃 Better?",
+            "Here's an imaginary cup of chai ☕ Extra sugar, zero stress.",
+            "Okay, last thing: can I get one tiny smile? Just a small one? 🥺"
+        ],
+        catDone: "Yay! Mission accomplished 🐾 My fee is one head pat.",
+        catPurr: ["prrr… 💗", "*happy cat noises*", "okay, one more head pat 🐾", "I'll tell Taimour you smiled 😸"],
+
+        // the bouquet at the end
+        bouquet: {
+            flowers: [['🌷', 'Tulip'], ['🌹', 'Rose'], ['🌸', 'Blossom'], ['🌻', 'Sunflower'], ['🌼', 'Daisy']],
+            to: "For Ma'am Kinza 🤍",
+            msg: "A little bouquet for one of the kindest people I know. May your days be as bright as you make everyone else's.",
+            from: '— from your Chintu 🌷'
+        },
 
         promises: [
             "I'll listen first, and never jump to conclusions again.",
@@ -489,7 +695,7 @@
     $('heroName').textContent = CONFIG.heroName;
     $('edName').textContent = CONFIG.name;
     $('askTitle').textContent = `So, ${CONFIG.name}…`;
-    $('footerFrom').textContent = CONFIG.from;
+    $('footerFrom').textContent = CONFIG.footerFrom;
 
     const paper = $('paper');
     CONFIG.letter.forEach((t, i) => {
@@ -672,6 +878,116 @@
             hearts(cx, cy, 6);
         }
     });
+
+    // ----- Apology cat -----
+    let catStep = 0;
+    function catSay(text) {
+        const b = $('catBubble');
+        b.textContent = text;
+        b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+    }
+    $('catBtn').addEventListener('click', () => {
+        const btn = $('catBtn');
+        btn.classList.remove('boop'); void btn.offsetWidth; btn.classList.add('boop');
+        const r = btn.getBoundingClientRect();
+        const cx = r.left + r.width / 2, cy = r.top + r.height * 0.3;
+        const lines = CONFIG.catLines;
+        if (catStep < lines.length) {
+            catSay(lines[catStep++]);
+            $('catHint').textContent = catStep < lines.length ? `tap again · ${lines.length - catStep} more` : 'tap once more';
+            hearts(cx, cy, 3, ['🐾', '💗']);
+        } else if (catStep === lines.length) {
+            catStep++;
+            $('cat').classList.add('happy');
+            catSay(CONFIG.catDone);
+            $('catHint').textContent = 'head pats are welcome anytime';
+            hearts(cx, cy, 14, ['🐾', '💗', '😸', '✨']);
+        } else {
+            catSay(CONFIG.catPurr[Math.floor(Math.random() * CONFIG.catPurr.length)]);
+            hearts(cx, cy, 4, ['🐾', '💗']);
+        }
+    });
+
+    // ----- Bouquet -----
+    const BQ = CONFIG.bouquet;
+    // [left %, top %, rotation] for each flower, filled in this order
+    const slots = [[50, 15, 0], [31, 22, -16], [69, 22, 16], [41, 33, -6], [59, 33, 6], [19, 37, -28], [81, 37, 28]];
+    let picked = 0;
+    const bq = $('bouquet');
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    const stems = document.createElementNS(SVGNS, 'svg');
+    stems.setAttribute('class', 'stems');
+    stems.setAttribute('viewBox', '0 0 100 100');
+    stems.setAttribute('preserveAspectRatio', 'none');
+    stems.setAttribute('aria-hidden', 'true');
+    bq.appendChild(stems);
+    function addStem(x, y) {
+        const l = document.createElementNS(SVGNS, 'line');
+        l.setAttribute('x1', x); l.setAttribute('y1', y + 12);
+        l.setAttribute('x2', 50 + (x - 50) * 0.12); l.setAttribute('y2', 82);
+        l.setAttribute('vector-effect', 'non-scaling-stroke');
+        stems.appendChild(l);
+    }
+    [[25, 40, -38], [75, 40, 38]].forEach(([x, y, r]) => {
+        const l = document.createElement('span');
+        l.className = 'bloom leaf'; l.textContent = '🌿';
+        l.style.left = x + '%'; l.style.top = y + '%'; l.style.setProperty('--rot', r + 'deg');
+        bq.appendChild(l);
+    });
+    $('tagTo').textContent = BQ.to;
+    $('tagMsg').textContent = BQ.msg;
+    $('tagFrom').textContent = BQ.from;
+    const bqCount = () => { $('bqCount').textContent = `${picked} / ${slots.length} flowers`; };
+    bqCount();
+    BQ.flowers.forEach(([emoji, label]) => {
+        const b = document.createElement('button');
+        b.innerHTML = `<span aria-hidden="true">${emoji}</span>`;
+        b.append(label);
+        b.addEventListener('click', () => addFlower(emoji, b));
+        $('picker').appendChild(b);
+    });
+    function sparkle() {
+        if (document.hidden) return;
+        const s = document.createElement('span');
+        s.className = 'sparkle';
+        s.textContent = ['✨', '✨', '💗', '⭐', '🌸'][Math.floor(Math.random() * 5)];
+        s.style.left = rand(8, 88) + '%';
+        s.style.top = rand(2, 55) + '%';
+        s.style.fontSize = rand(11, 18) + 'px';
+        bq.appendChild(s);
+        setTimeout(() => s.remove(), 1900);
+    }
+    function addFlower(emoji, src) {
+        if (picked >= slots.length) return;
+        const [x, y, r] = slots[picked++];
+        addStem(x, y);
+        const f = document.createElement('button');
+        f.className = 'bloom'; f.textContent = emoji; f.setAttribute('aria-label', 'Flower');
+        f.style.left = x + '%'; f.style.top = y + '%'; f.style.setProperty('--rot', r + 'deg');
+        f.style.setProperty('--dl', (picked * 0.35) + 's');
+        f.addEventListener('animationend', () => f.classList.remove('wiggle'));
+        f.addEventListener('click', () => {
+            f.classList.remove('wiggle'); void f.offsetWidth; f.classList.add('wiggle');
+            const fr = f.getBoundingClientRect();
+            hearts(fr.left + fr.width / 2, fr.top, 3, ['💗', '✨']);
+        });
+        bq.appendChild(f);
+        bqCount();
+        const sr = src.getBoundingClientRect();
+        hearts(sr.left + sr.width / 2, sr.top, 2, ['✨', emoji]);
+        if (picked === slots.length) {
+            setTimeout(() => {
+                bq.classList.add('done');
+                $('picker').style.display = 'none';
+                $('bqCount').textContent = 'All wrapped up, just for you (tap the flowers 🌸)';
+                $('giftTag').classList.add('show');
+                const br = bq.getBoundingClientRect();
+                hearts(br.left + br.width / 2, br.top + br.height / 2, 20, ['🌷', '💗', '🌸', '✨', '🤍']);
+                setTimeout(() => $('giftTag').classList.add('swing'), 700);
+                if (!reduceMotion) setInterval(sparkle, 650);
+            }, 700);
+        }
+    }
 
     // ----- The question -----
     function showReply(msg) {
