@@ -622,7 +622,7 @@
                 <button class="btn btn-primary" id="yesBtn">Yes, I forgive you 🤍</button>
                 <button class="btn btn-ghost" id="timeBtn">I need a little time</button>
             </div>
-            <p class="send-note" id="sendNote">Your answer will be sent to <span id="noteFrom">Taimour</span> 🤍</p>
+            <p class="send-note" id="sendNote">Chintu is waiting for your response… 👀</p>
             <div class="reply" id="reply" aria-live="polite"></div>
         </section>
 
@@ -741,7 +741,7 @@
                 "I don't ever want to lose you, Ma'am. You mean far too much to me, and that will never change.",
                 "Thank you for being exactly who you are."
             ],
-            sign: '— Taimour aka Chintu 🤍'
+            sign: '💌 Chintu 🤍'
         },
 
         // the bouquet at the end
@@ -749,7 +749,7 @@
             flowers: [['🌷', 'Tulip'], ['🌹', 'Rose'], ['🌸', 'Blossom'], ['🌻', 'Sunflower'], ['🌼', 'Daisy']],
             to: "For Ma'am Kinza 🤍",
             msg: "A little bouquet for one of the kindest people I know. May your days be as bright as you make everyone else's.",
-            from: '— from your Chintu 🌷'
+            from: '💐 from your Chintu 🌷'
         },
 
         promises: [
@@ -769,9 +769,10 @@
             text: "You just turned my rain into sunshine. I'll keep every promise on this page, and I'll always be grateful that someone as rare as you is in my life."
         },
         needTime: {
-            big: 'Of course, Ma\'am 🤍',
-            text: "Take all the time you need. I'll be right here: still sorry, and still so grateful for you."
-        }
+            big: "Okay okay, take your time Ma'am ⏳",
+            text: "No rush at all! Chintu will just be sitting right here with snacks, checking the inbox every two seconds and pretending to be very patient 🙈 But a reply is needed, whenever you're ready. Any reply. Even an emoji."
+        },
+        needTimeNote: 'Chintu is still waiting… very patiently… mostly 🐢'
     };
     // ==========================================
 
@@ -1295,7 +1296,6 @@
         }).then(r => {
             if (!r.ok) return;
             try { localStorage.removeItem('pendingAnswer'); } catch (e) {}
-            $('sendNote').textContent = `Your answer has been sent to ${CONFIG.from} 🤍`;
         }).catch(() => { /* kept in pendingAnswer, retried next time the page opens */ });
     }
     function retryPending() {
@@ -1309,6 +1309,7 @@
         mode = 'petals';
         for (let i = 0; i < Math.round(petalCount() / 2); i++) petals.push(newPetal(true));
         $('choices').style.display = 'none';
+        $('sendNote').style.display = 'none';
         showReply(CONFIG.forgiven);
         if (fromClick) {
             const r = $('yesBtn').getBoundingClientRect();
@@ -1325,6 +1326,7 @@
         sendAnswer('I need a little time');
         sfx.soft();
         showReply(CONFIG.needTime);
+        $('sendNote').textContent = CONFIG.needTimeNote;
         $('timeBtn').style.display = 'none';
         $('yesBtn').textContent = "Whenever you're ready 🤍";
     });
@@ -1334,7 +1336,6 @@
     window.scrollTo(0, 0);
     // Back/forward or reopening a tab can show a frozen copy of the page; reload it so it starts over.
     window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
-    $('noteFrom').textContent = CONFIG.from;
     retryPending();
     </script>
 </body>
