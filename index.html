@@ -351,6 +351,43 @@
         .gift-tag .msg { font-family: 'Caveat', cursive; font-size: 1.4rem; line-height: 1.25; color: #3f3657; margin: 6px 0; }
         .gift-tag .from { font-family: 'Caveat', cursive; font-size: 1.6rem; font-weight: 700; color: var(--rose-d); }
 
+        /* ---------- Keepsake note ---------- */
+        .fold {
+            position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px;
+            width: min(260px, 100%); margin: 20px auto 4px; padding: 26px 16px 20px; border: none; cursor: pointer;
+            border-radius: 14px; background: linear-gradient(160deg, #fffaf3, #fbeef4);
+            box-shadow: 0 12px 30px rgba(80, 60, 120, .16); font: 600 .9rem 'Nunito', sans-serif; color: var(--muted);
+            -webkit-tap-highlight-color: transparent; animation: glowPulse 2.8s ease-in-out infinite;
+            transition: transform .5s ease, opacity .5s ease;
+        }
+        .fold::after {
+            content: ''; position: absolute; right: 0; top: 0; width: 26px; height: 26px; border-radius: 0 14px 0 8px;
+            background: linear-gradient(225deg, rgba(220, 180, 200, .55) 50%, transparent 50%);
+        }
+        .fold .seal-big {
+            width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; font-size: 22px;
+            background: radial-gradient(circle at 35% 35%, #f094b2, var(--rose-d)); box-shadow: 0 4px 12px rgba(196, 85, 124, .4);
+        }
+        .fold .fold-title { font-family: 'Caveat', cursive; font-size: 1.5rem; color: var(--ink); line-height: 1.1; }
+        @keyframes glowPulse { 50% { box-shadow: 0 12px 34px rgba(226, 121, 156, .38); } }
+        .fold.opened { transform: scale(.85); opacity: 0; pointer-events: none; }
+        .keep-note { display: none; margin-top: 6px; }
+        .keep-note.show { display: block; }
+        .keep-note p { text-wrap: balance; }
+        .keep-note p { opacity: 0; transform: translateY(10px); transition: opacity 1s ease, transform 1s ease; }
+        .keep-note.in p { opacity: 1; transform: none; }
+        .keep-note .k-intro { color: var(--muted); margin-top: 8px; }
+        .keep-note .k-big {
+            position: relative; margin: 18px auto 6px; max-width: 420px; padding: 18px 14px;
+            font-family: 'Playfair Display', serif; font-style: italic; font-weight: 500;
+            font-size: clamp(1.35rem, 6.2vw, 1.75rem); line-height: 1.35; color: var(--rose-d);
+            border-top: 1px solid rgba(196, 85, 124, .25); border-bottom: 1px solid rgba(196, 85, 124, .25);
+        }
+        .keep-note .k-forever { font-size: .78rem; letter-spacing: .22em; text-transform: uppercase; font-weight: 700; color: var(--lav); }
+        .keep-note .k-forever span { display: inline-block; font-size: 1.2rem; letter-spacing: 0; vertical-align: -2px; animation: beat 2.4s ease-in-out infinite; }
+        .keep-note .k-line { margin-top: 14px; color: var(--ink); max-width: 400px; margin-left: auto; margin-right: auto; }
+        .keep-note .k-sign { margin-top: 16px; font-family: 'Caveat', cursive; font-size: 1.6rem; font-weight: 700; color: var(--rose-d); }
+
         /* ---------- Sound toggle ---------- */
         .sound-btn {
             position: fixed; z-index: 40; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right));
@@ -618,6 +655,19 @@
             </div>
         </section>
 
+        <!-- Keepsake: a special message to remember -->
+        <section class="card rv">
+            <p class="kicker">Please remember this</p>
+            <h2>Always, Ma'am</h2>
+            <p class="lead">One more little note, the most important one.</p>
+            <button class="fold" id="keepBtn" aria-label="Open the special note">
+                <span class="seal-big" aria-hidden="true">🤍</span>
+                <span class="fold-title">Something to keep</span>
+                <span>tap to open</span>
+            </button>
+            <div class="keep-note" id="keepNote" aria-live="polite"></div>
+        </section>
+
         <footer class="rv">
             Written with a heavy heart and a hopeful one<br><b id="footerFrom">Taimour aka Chintu 🤍</b>
         </footer>
@@ -665,6 +715,18 @@
             "Okay, last thing: can I get one tiny smile? Just a small one? 🥺"
         ],
         catDone: "Yay! Mission accomplished 🐾 My fee is one head pat.",
+
+        // the special "please remember this" note at the very end
+        keepsake: {
+            intro: "Whatever happens, I want you to always remember this:",
+            big: "You are, and always will be, my most honourable, favourite and cutest human being.",
+            forever: 'Now and forever',
+            lines: [
+                "I don't ever want to lose you, Ma'am. You mean far too much to me, and that will never change.",
+                "Thank you for being exactly who you are."
+            ],
+            sign: '— Taimour aka Chintu 🤍'
+        },
 
         // the bouquet at the end
         bouquet: {
@@ -1044,6 +1106,39 @@
             hearts(cx, cy, 3, ['💗']);   // done: just a quiet little heart, no more lines or sounds
         }
     });
+
+    // ----- Keepsake note -----
+    (() => {
+        const K = CONFIG.keepsake, box = $('keepNote');
+        const add = (cls, text) => {
+            const p = document.createElement('p');
+            p.className = cls; p.textContent = text;
+            p.style.transitionDelay = (box.children.length * 0.7) + 's';
+            box.appendChild(p);
+            return p;
+        };
+        add('k-intro', K.intro);
+        add('k-big', K.big);
+        const f = add('k-forever', K.forever + ' ');
+        const inf = document.createElement('span'); inf.textContent = '∞'; f.appendChild(inf);
+        K.lines.forEach(t => add('k-line', t));
+        add('k-sign', K.sign);
+        $('keepBtn').addEventListener('click', () => {
+            const btn = $('keepBtn');
+            if (btn.classList.contains('opened')) return;
+            sfx.swish(0.14);
+            setTimeout(() => sfx.finale(), 250);
+            btn.classList.add('opened');
+            const r = btn.getBoundingClientRect();
+            hearts(r.left + r.width / 2, r.top + r.height / 2, 14, ['🤍', '💗', '✨', '🌷']);
+            setTimeout(() => {
+                btn.style.display = 'none';
+                box.classList.add('show');
+                void box.offsetWidth;
+                box.classList.add('in');
+            }, 500);
+        });
+    })();
 
     // ----- Bouquet -----
     const BQ = CONFIG.bouquet;
