@@ -1315,7 +1315,6 @@
             hearts(r.left + r.width / 2, r.top, 24);
             setTimeout(() => hearts(W / 2, H * 0.6, 20), 500);
         }
-        try { localStorage.setItem('forgiven', '1'); } catch (e) {}
     }
     $('yesBtn').addEventListener('click', () => {
         sendAnswer('Yes, I forgive you 🤍');
@@ -1329,8 +1328,12 @@
         $('timeBtn').style.display = 'none';
         $('yesBtn').textContent = "Whenever you're ready 🤍";
     });
-    // If she already forgave on this phone, keep the sunshine when she comes back.
-    try { if (localStorage.getItem('forgiven') === '1') forgive(false); } catch (e) {}
+    // Every visit starts fresh from the envelope: no restored progress or scroll position.
+    try { localStorage.removeItem('forgiven'); } catch (e) {}
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
+    // Back/forward or reopening a tab can show a frozen copy of the page; reload it so it starts over.
+    window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
     $('noteFrom').textContent = CONFIG.from;
     retryPending();
     </script>
