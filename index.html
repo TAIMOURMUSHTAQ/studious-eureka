@@ -351,6 +351,16 @@
         .gift-tag .msg { font-family: 'Caveat', cursive; font-size: 1.4rem; line-height: 1.25; color: #3f3657; margin: 6px 0; }
         .gift-tag .from { font-family: 'Caveat', cursive; font-size: 1.6rem; font-weight: 700; color: var(--rose-d); }
 
+        /* ---------- Sound toggle ---------- */
+        .sound-btn {
+            position: fixed; z-index: 40; top: calc(12px + env(safe-area-inset-top)); right: calc(12px + env(safe-area-inset-right));
+            width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .8);
+            background: rgba(255, 255, 255, .7); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+            box-shadow: 0 6px 16px rgba(80, 60, 120, .15); font-size: 18px; line-height: 1; cursor: pointer;
+            display: grid; place-items: center; -webkit-tap-highlight-color: transparent; transition: transform .15s;
+        }
+        .sound-btn:active { transform: scale(.9); }
+
         /* ---------- Promises ---------- */
         .promises { list-style: none; margin-top: 16px; text-align: left; }
         .promises li {
@@ -423,6 +433,8 @@
     <div class="sky happy"></div>
     <div class="sun"></div>
     <canvas id="fx"></canvas>
+
+    <button class="sound-btn" id="soundBtn" aria-label="Turn sounds off">🔊</button>
 
     <!-- Intro: tap the envelope to open -->
     <div class="intro" id="intro">
@@ -653,7 +665,6 @@
             "Okay, last thing: can I get one tiny smile? Just a small one? 🥺"
         ],
         catDone: "Yay! Mission accomplished 🐾 My fee is one head pat.",
-        catPurr: ["prrr… 💗", "*happy cat noises*", "okay, one more head pat 🐾", "I'll tell Taimour you smiled 😸"],
 
         // the bouquet at the end
         bouquet: {
@@ -689,6 +700,127 @@
     const $ = (id) => document.getElementById(id);
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const rand = (a, b) => a + Math.random() * (b - a);
+
+    // ----- Little sounds (made with Web Audio, no files needed) -----
+    const sfx = (() => {
+        let ac = null, master = null, echo = null;
+        let on = true;
+        try { on = localStorage.getItem('sound') !== 'off'; } catch (e) {}
+        const N = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98]; // C major pentatonic
+        function ready() {
+            if (!on) return false;
+            try {
+                if (!ac) {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (!AC) return false;
+                    ac = new AC();
+                    master = ac.createGain(); master.gain.value = 0.45; master.connect(ac.destination);
+                    echo = ac.createDelay(1); echo.delayTime.value = 0.27;
+                    const fb = ac.createGain(); fb.gain.value = 0.32;
+                    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2600;
+                    const wet = ac.createGain(); wet.gain.value = 0.4;
+                    echo.connect(lp).connect(fb).connect(echo);
+                    lp.connect(wet).connect(master);
+                }
+                if (ac.state === 'suspended') ac.resume();
+                return true;
+            } catch (e) { return false; }
+        }
+        function env(g, t, vol, a, d) {
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(vol, t + a);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+        }
+        function bell(f, delay = 0, vol = 0.22, dur = 1.1) {
+            const t = ac.currentTime + delay;
+            [[1, vol], [2.01, vol * 0.25], [3.02, vol * 0.08]].forEach(([m, v]) => {
+                const o = ac.createOscillator(), g = ac.createGain();
+                o.type = 'sine'; o.frequency.value = f * m;
+                env(g, t, v, 0.008, dur / m);
+                o.connect(g).connect(master); o.start(t); o.stop(t + dur + 0.1);
+            });
+        }
+        function arp(notes, step = 0.09, vol = 0.18) { notes.forEach((n, i) => bell(n, i * step, vol)); }
+        function noise(dur) {
+            const b = ac.createBuffer(1, Math.floor(ac.sampleRate * dur), ac.sampleRate);
+            const d = b.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+            const s = ac.createBufferSource(); s.buffer = b; return s;
+        }
+        const api = {
+            get on() { return on; },
+            toggle() {
+                on = !on;
+                try { localStorage.setItem('sound', on ? 'on' : 'off'); } catch (e) {}
+                if (on) api.pling(4);
+                return on;
+            },
+            // soft paper swish (envelope, card flip)
+            swish(vol = 0.18) {
+                if (!ready()) return;
+                const t = ac.currentTime, s = noise(0.4), f = ac.createBiquadFilter(), g = ac.createGain();
+                f.type = 'bandpass'; f.Q.value = 0.8;
+                f.frequency.setValueAtTime(500, t); f.frequency.exponentialRampToValueAtTime(3200, t + 0.3);
+                env(g, t, vol, 0.06, 0.3);
+                s.connect(f).connect(g).connect(master); s.start(t);
+            },
+            open() { if (!ready()) return; api.swish(0.16); arp([N[0], N[2], N[3], N[5]], 0.1, 0.14); },
+            // a soft music-box note with a gentle echo; each tap plays the next note of a little melody
+            musicBox(step = 0) {
+                if (!ready()) return;
+                const melody = [659.25, 783.99, 880, 1046.5, 1174.66, 1318.51, 1567.98]; // E5 G5 A5 C6 D6 E6 G6
+                const f = melody[step % melody.length], t = ac.currentTime;
+                const out = ac.createGain(); out.gain.value = 1;
+                out.connect(master); out.connect(echo);
+                // tine: pure tone plus a quick shimmering overtone
+                [[1, 0.2, 1.8], [3, 0.035, 0.5], [4.2, 0.018, 0.25]].forEach(([m, v, d]) => {
+                    const o = ac.createOscillator(), g = ac.createGain();
+                    o.type = 'sine'; o.frequency.value = f * m;
+                    env(g, t, v, 0.006, d);
+                    o.connect(g).connect(out); o.start(t); o.stop(t + d + 0.1);
+                });
+                // warm, airy layer an octave below
+                const w = ac.createOscillator(), wg = ac.createGain();
+                w.type = 'triangle'; w.frequency.value = f / 2;
+                env(wg, t, 0.05, 0.05, 1.2);
+                w.connect(wg).connect(out); w.start(t); w.stop(t + 1.35);
+            },
+            // closing chime: a slow, gentle sparkle upward
+            finale() {
+                if (!ready()) return;
+                [1046.5, 1318.51, 1567.98, 2093].forEach((n, i) => setTimeout(() => {
+                    const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+                    o.type = 'sine'; o.frequency.value = n;
+                    env(g, t, 0.12, 0.01, 1.6);
+                    o.connect(g); g.connect(master); g.connect(echo);
+                    o.start(t); o.stop(t + 1.7);
+                }, i * 140));
+            },
+            // bubbly pop that climbs with each step
+            pop(step = 0) {
+                if (!ready()) return;
+                const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+                o.type = 'sine';
+                o.frequency.setValueAtTime(260 + step * 40, t);
+                o.frequency.exponentialRampToValueAtTime(620 + step * 90, t + 0.1);
+                env(g, t, 0.3, 0.01, 0.16);
+                o.connect(g).connect(master); o.start(t); o.stop(t + 0.2);
+            },
+            pling(i = 0) { if (ready()) bell(N[i % N.length], 0, 0.2, 0.9); },
+            blip() { if (ready()) bell(N[6 + Math.floor(Math.random() * 3)], 0, 0.1, 0.4); },
+            twinkle() { if (ready()) arp([N[5], N[7], N[6], N[8]], 0.06, 0.07); },
+            happy() { if (ready()) arp([N[0], N[2], N[3], N[5], N[7], N[8]], 0.1, 0.16); },
+            soft() { if (ready()) arp([N[3], N[2]], 0.22, 0.12); }
+        };
+        return api;
+    })();
+    const soundBtn = document.getElementById('soundBtn');
+    function paintSound() {
+        soundBtn.textContent = sfx.on ? '🔊' : '🔇';
+        soundBtn.setAttribute('aria-label', sfx.on ? 'Turn sounds off' : 'Turn sounds on');
+    }
+    paintSound();
+    soundBtn.addEventListener('click', () => { sfx.toggle(); paintSound(); });
 
     // ----- Fill content -----
     $('introTo').textContent = CONFIG.introGreeting;
@@ -816,6 +948,7 @@
 
     // ----- Intro -----
     $('envelope').addEventListener('click', () => {
+        if (!$('envelope').classList.contains('open')) sfx.open();
         $('envelope').classList.add('open');
         setTimeout(() => {
             $('intro').classList.add('gone');
@@ -824,7 +957,7 @@
     });
 
     // ----- Limited-edition card: flip on tap, tilt with mouse -----
-    $('edition').addEventListener('click', () => $('edition').classList.toggle('flipped'));
+    $('edition').addEventListener('click', () => { sfx.swish(); $('edition').classList.toggle('flipped'); });
     const tilt = $('tilt');
     tilt.addEventListener('pointermove', (e) => {
         if (e.pointerType !== 'mouse') return;
@@ -864,17 +997,20 @@
         if (mended < steps) {
             const [text, lang] = CONFIG.sorrys[mended];
             mended++;
+            sfx.pop(mended);
             setHeart();
             sayLine(text, mended < steps ? `${lang} · ${steps - mended} more` : lang);
             hearts(cx, cy, 5);
             if (mended === steps) {
                 setTimeout(() => {
                     $('heartBtn').classList.add('whole');
+                    sfx.happy();
                     sayLine(CONFIG.healed[0], CONFIG.healed[1]);
                     hearts(cx, cy, 16);
                 }, 900);
             }
         } else {
+            sfx.blip();
             hearts(cx, cy, 6);
         }
     });
@@ -893,18 +1029,19 @@
         const cx = r.left + r.width / 2, cy = r.top + r.height * 0.3;
         const lines = CONFIG.catLines;
         if (catStep < lines.length) {
+            sfx.musicBox(catStep);
             catSay(lines[catStep++]);
             $('catHint').textContent = catStep < lines.length ? `tap again · ${lines.length - catStep} more` : 'tap once more';
             hearts(cx, cy, 3, ['🐾', '💗']);
         } else if (catStep === lines.length) {
             catStep++;
             $('cat').classList.add('happy');
+            sfx.finale();
             catSay(CONFIG.catDone);
             $('catHint').textContent = 'head pats are welcome anytime';
             hearts(cx, cy, 14, ['🐾', '💗', '😸', '✨']);
         } else {
-            catSay(CONFIG.catPurr[Math.floor(Math.random() * CONFIG.catPurr.length)]);
-            hearts(cx, cy, 4, ['🐾', '💗']);
+            hearts(cx, cy, 3, ['💗']);   // done: just a quiet little heart, no more lines or sounds
         }
     });
 
@@ -961,12 +1098,14 @@
         if (picked >= slots.length) return;
         const [x, y, r] = slots[picked++];
         addStem(x, y);
+        sfx.pling(picked - 1);
         const f = document.createElement('button');
         f.className = 'bloom'; f.textContent = emoji; f.setAttribute('aria-label', 'Flower');
         f.style.left = x + '%'; f.style.top = y + '%'; f.style.setProperty('--rot', r + 'deg');
         f.style.setProperty('--dl', (picked * 0.35) + 's');
         f.addEventListener('animationend', () => f.classList.remove('wiggle'));
         f.addEventListener('click', () => {
+            sfx.blip();
             f.classList.remove('wiggle'); void f.offsetWidth; f.classList.add('wiggle');
             const fr = f.getBoundingClientRect();
             hearts(fr.left + fr.width / 2, fr.top, 3, ['💗', '✨']);
@@ -978,6 +1117,7 @@
         if (picked === slots.length) {
             setTimeout(() => {
                 bq.classList.add('done');
+                sfx.happy(); setTimeout(() => sfx.twinkle(), 650);
                 $('picker').style.display = 'none';
                 $('bqCount').textContent = 'All wrapped up, just for you (tap the flowers 🌸)';
                 $('giftTag').classList.add('show');
@@ -1043,10 +1183,12 @@
     }
     $('yesBtn').addEventListener('click', () => {
         sendAnswer('Yes, I forgive you 🤍');
+        sfx.happy(); setTimeout(() => sfx.twinkle(), 700);
         forgive(true);
     });
     $('timeBtn').addEventListener('click', () => {
         sendAnswer('I need a little time');
+        sfx.soft();
         showReply(CONFIG.needTime);
         $('timeBtn').style.display = 'none';
         $('yesBtn').textContent = "Whenever you're ready 🤍";
