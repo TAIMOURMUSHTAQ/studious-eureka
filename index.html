@@ -241,6 +241,14 @@
         .dots { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
         .dots i { width: 9px; height: 9px; border-radius: 50%; background: rgba(196, 85, 124, .2); transition: background .3s, transform .3s; }
         .dots i.on { background: var(--rose); transform: scale(1.2); }
+        button.dots { border: none; background: none; padding: 8px 10px; margin: 2px auto 0; font: inherit; cursor: default; -webkit-tap-highlight-color: transparent; }
+        button.dots.ready { cursor: pointer; }
+        button.dots.ready i.on { animation: dotWobble 2.2s ease-in-out infinite; }
+        button.dots.ready i:nth-child(2n) { animation-delay: .15s; }
+        button.dots.ready i:nth-child(3n) { animation-delay: .3s; }
+        @keyframes dotWobble { 0%, 70%, 100% { transform: scale(1.2); } 80% { transform: scale(1.5) translateY(-2px); } 90% { transform: scale(1.1); } }
+        .dots-hint { display: block; min-height: 1.2em; font-size: .72rem; letter-spacing: .06em; color: var(--muted); opacity: 0; transition: opacity .5s; }
+        .dots-hint.show { opacity: 1; }
 
         /* ---------- Apology cat ---------- */
         .bubble {
@@ -561,7 +569,8 @@
                 <span class="say">It's broken… because of me.</span>
                 <span class="lang">tap it</span>
             </div>
-            <div class="dots" id="dots"></div>
+            <button type="button" class="dots" id="dots" aria-label="Sorry counter" disabled></button>
+            <span class="dots-hint" id="dotsHint">psst… tap the dots</span>
         </section>
 
         <!-- Apology cat: a little comic relief -->
@@ -704,6 +713,13 @@
             ['ごめんなさい', 'Japanese']
         ],
         healed: ["However it's said, I mean it with my whole heart.", 'Thank you for letting me try 🤍'],
+        // shown when the dots are tapped and the heart cracks again (cycles in order)
+        rebreak: [
+            "I never want to break it again… but if it ever cracks, I'll be right here to mend it.",
+            "Even if it breaks a hundred times, I'll fix it a hundred and one.",
+            "I'll try my very best to never let this happen again.",
+            "No matter what, I'll always come back to make it right 🤍"
+        ],
 
         // the apology cat, one line per tap
         catLines: [
@@ -1064,17 +1080,42 @@
             sayLine(text, mended < steps ? `${lang} · ${steps - mended} more` : lang);
             hearts(cx, cy, 5);
             if (mended === steps) {
-                setTimeout(() => {
+                healTimer = setTimeout(() => {
                     $('heartBtn').classList.add('whole');
                     sfx.happy();
                     sayLine(CONFIG.healed[0], CONFIG.healed[1]);
                     hearts(cx, cy, 16);
+                    setDotsReady(true);
                 }, 900);
             }
         } else {
             sfx.blip();
             hearts(cx, cy, 6);
         }
+    });
+
+    // Once mended, the dots can crack the heart again, with a gentle promise each time
+    let healTimer = 0, rebreaks = 0;
+    function setDotsReady(on) {
+        const d = $('dots');
+        d.disabled = !on;
+        d.classList.toggle('ready', on);
+        d.setAttribute('aria-label', on ? 'Tap to break the heart again' : 'Sorry counter');
+        $('dotsHint').classList.toggle('show', on);
+    }
+    $('dots').addEventListener('click', () => {
+        if (mended < steps || !$('heartBtn').classList.contains('whole')) return;
+        clearTimeout(healTimer);
+        setDotsReady(false);
+        $('heartBtn').classList.remove('whole');
+        mended = 0;
+        setHeart();
+        sfx.soft();
+        const lines = CONFIG.rebreak;
+        sayLine(lines[rebreaks % lines.length], 'tap the heart to mend it again');
+        rebreaks++;
+        const r = $('heartBtn').getBoundingClientRect();
+        hearts(r.left + r.width / 2, r.top + r.height / 2, 4, ['🩹', '🤍']);
     });
 
     // ----- Apology cat -----
